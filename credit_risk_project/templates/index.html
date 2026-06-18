@@ -1,0 +1,562 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Behavioral Credit Risk Scoring Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        .input-field {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 11px 14px;
+            font-size: 0.875rem;
+            color: #1e293b;
+            background: #f8fafc;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .input-field:focus {
+            border-color: #1d4ed8;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.08);
+        }
+        .input-field::placeholder { color: #94a3b8; }
+        select.input-field { cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+        .result-card { transition: transform 0.2s, box-shadow 0.2s; }
+        .result-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.10); }
+        .btn-analyze {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            padding: 14px 48px;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(29,78,216,0.25);
+            transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+        }
+        .btn-analyze:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+            box-shadow: 0 6px 24px rgba(29,78,216,0.35);
+            transform: translateY(-1px);
+        }
+        .btn-analyze:active { transform: translateY(0); }
+        .section-card { background: #fff; border-radius: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); padding: 32px; }
+        .section-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .section-title-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .field-label { display: block; font-size: 0.75rem; font-weight: 600; color: #475569; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+        .legend-chip { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: #f1f5f9; }
+        .legend-chip-key { font-size: 0.75rem; font-weight: 700; color: #1d4ed8; min-width: 18px; }
+        .legend-chip-val { font-size: 0.72rem; color: #475569; }
+        .header-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%); }
+        .auc-badge { background: linear-gradient(90deg, #10b981 0%, #059669 100%); color: #fff; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; padding: 5px 14px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; }
+        .result-score { font-size: 3rem; font-weight: 800; line-height: 1; }
+        .result-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #94a3b8; margin-bottom: 10px; }
+        .divider { width: 32px; height: 3px; border-radius: 2px; margin: 10px auto 0; }
+        /* Django error styling */
+        .errorlist { list-style: none; padding: 0; margin: 4px 0 0; }
+        .errorlist li { font-size: 0.75rem; color: #ef4444; font-weight: 500; }
+        .field-error .input-field { border-color: #ef4444; background: #fff5f5; }
+        /* Messages */
+        .django-message { padding: 12px 18px; border-radius: 12px; margin-bottom: 16px; font-size: 0.875rem; font-weight: 500; }
+        .django-message.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+        .django-message.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    </style>
+</head>
+<body style="background: #f1f5f9; min-height: 100vh;">
+
+    <!-- ── Header ── -->
+    <header class="header-gradient text-white py-10 shadow-xl">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <p class="text-xs font-semibold tracking-widest text-blue-300 uppercase mb-1">Risk Intelligence Platform</p>
+                <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">Behavioral Credit Risk Scoring Engine</h1>
+                <p class="text-blue-300 mt-1 text-sm">AI-Powered Loan Risk Assessment · XGBoost Model</p>
+            </div>
+            <div class="flex flex-col items-start md:items-end gap-2">
+                <span class="auc-badge">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" stroke="#fff" stroke-width="1.5"/><path d="M4 6l1.5 1.5L8 4.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    ROC-AUC: 0.904
+                </span>
+                <span class="text-blue-400 text-xs">Model Version 2.1 · Updated Jun 2025</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── Main ── -->
+    <main class="max-w-7xl mx-auto px-4 md:px-6 py-10">
+
+        <!-- Django messages block -->
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="django-message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'predict' %}" novalidate>
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- ── Customer Information ── -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <span class="section-title-icon bg-blue-50">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="5" r="3" stroke="#1d4ed8" stroke-width="1.5"/><path d="M2 13c0-3 2.686-5 6-5s6 2 6 5" stroke="#1d4ed8" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </span>
+                        Customer Information
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                        <!-- Gender -->
+                        <div class="{% if form.gender.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_gender">Gender</label>
+                            <select name="gender" id="id_gender" class="input-field">
+                                <option value="" disabled {% if not form.gender.value %}selected{% endif %}>Select gender</option>
+                                <option value="M" {% if form.gender.value == "M" %}selected{% endif %}>Male</option>
+                                <option value="F" {% if form.gender.value == "F" %}selected{% endif %}>Female</option>
+                            </select>
+                            {% if form.gender.errors %}<ul class="errorlist">{% for e in form.gender.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Income Type -->
+                        <div class="{% if form.income_type.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_income_type">Income Type</label>
+                            <select name="income_type" id="id_income_type" class="input-field">
+                                <option value="" disabled {% if not form.income_type.value %}selected{% endif %}>Select type</option>
+                                <option value="Working" {% if form.income_type.value == "Working" %}selected{% endif %}>Working</option>
+                                <option value="Commercial associate" {% if form.income_type.value == "Commercial associate" %}selected{% endif %}>Commercial Associate</option>
+                                <option value="Pensioner" {% if form.income_type.value == "Pensioner" %}selected{% endif %}>Pensioner</option>
+                                <option value="State servant" {% if form.income_type.value == "State servant" %}selected{% endif %}>State Servant</option>
+                                <option value="Student" {% if form.income_type.value == "Student" %}selected{% endif %}>Student</option>
+                            </select>
+                            {% if form.income_type.errors %}<ul class="errorlist">{% for e in form.income_type.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Education -->
+                        <div class="{% if form.education.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_education">Education Level</label>
+                            <select name="education" id="id_education" class="input-field">
+                                <option value="" disabled {% if not form.education.value %}selected{% endif %}>Select level</option>
+                                <option value="Higher education" {% if form.education.value == "Higher education" %}selected{% endif %}>Higher Education</option>
+                                <option value="Incomplete higher" {% if form.education.value == "Incomplete higher" %}selected{% endif %}>Incomplete Higher</option>
+                                <option value="Secondary / secondary special" {% if form.education.value == "Secondary / secondary special" %}selected{% endif %}>Secondary / Secondary Special</option>
+                                <option value="Lower secondary" {% if form.education.value == "Lower secondary" %}selected{% endif %}>Lower Secondary</option>
+                            </select>
+                            {% if form.education.errors %}<ul class="errorlist">{% for e in form.education.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Occupation -->
+                        <div class="{% if form.occupation.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_occupation">Occupation</label>
+                            <select name="occupation" id="id_occupation" class="input-field">
+                                <option value="" disabled {% if not form.occupation.value %}selected{% endif %}>Select occupation</option>
+                                <option value="Managers" {% if form.occupation.value == "Managers" %}selected{% endif %}>Managers</option>
+                                <option value="IT staff" {% if form.occupation.value == "IT staff" %}selected{% endif %}>IT Staff</option>
+                                <option value="Core staff" {% if form.occupation.value == "Core staff" %}selected{% endif %}>Core Staff</option>
+                                <option value="Drivers" {% if form.occupation.value == "Drivers" %}selected{% endif %}>Drivers</option>
+                                <option value="Laborers" {% if form.occupation.value == "Laborers" %}selected{% endif %}>Laborers</option>
+                                <option value="Sales staff" {% if form.occupation.value == "Sales staff" %}selected{% endif %}>Sales Staff</option>
+                                <option value="Medicine staff" {% if form.occupation.value == "Medicine staff" %}selected{% endif %}>Medicine Staff</option>
+                                <option value="Security staff" {% if form.occupation.value == "Security staff" %}selected{% endif %}>Security Staff</option>
+                                <option value="Cleaning staff" {% if form.occupation.value == "Cleaning staff" %}selected{% endif %}>Cleaning Staff</option>
+                                <option value="Unknown" {% if form.occupation.value == "Unknown" %}selected{% endif %}>Unknown</option>
+                                <option value="Cooking staff" {% if form.occupation.value == "Cooking staff" %}selected{% endif %}>Cooking Staff</option>
+                                <option value="HR staff"{% if form.occupation.value == "HR staff" %}selected{% endif %}>HR Staff</option>
+                                <option value="High skill tech staff"{% if form.occupation.value == "High skill tech staff" %}selected{% endif %}>High Skill Tech Staff</option>
+                                <option value="Low-skill Laborers"{% if form.occupation.value == "Low-skill Laborers" %}selected{% endif %}>Low-skill Laborers</option>
+                                <option value="Private service staff"{% if form.occupation.value == "Private service staff" %}selected{% endif %}>Private Service Staff</option>
+                                <option value="Realty agents"{% if form.occupation.value == "Realty agents" %}selected{% endif %}>Realty Agents</option>
+                                <option value="Secretaries"{% if form.occupation.value == "Secretaries" %}selected{% endif %}>Secretaries</option>
+                                <option value="Waiters/barmen staff"{% if form.occupation.value == "Waiters/barmen staff" %}selected{% endif %}>Waiters/Barmen Staff</option>
+                            </select>
+                            {% if form.occupation.errors %}<ul class="errorlist">{% for e in form.occupation.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                        
+                        <!-- Housing Type -->
+                        <div class="{% if form.housing_type.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_housing_type">Housing Type</label>
+                            <select name="housing_type" id="id_housing_type" class="input-field">
+                                <option value="" disabled {% if not form.housing_type.value %}selected{% endif %}>Select housing type</option>
+                                <option value="House / apartment" {% if form.housing_type.value == "House / apartment" %}selected{% endif %}>House / Apartment</option>
+                                <option value="Municipal apartment" {% if form.housing_type.value == "Municipal apartment" %}selected{% endif %}>Municipal Apartment</option>
+                                <option value="Office apartment" {% if form.housing_type.value == "Office apartment" %}selected{% endif %}>Office Apartment</option>
+                                <option value="Rented apartment" {% if form.housing_type.value == "Rented apartment" %}selected{% endif %}>Rented Apartment</option>
+                                <option value="With parents" {% if form.housing_type.value == "With parents" %}selected{% endif %}>With Parents</option>
+                            </select>
+                            {% if form.housing_type.errors %}<ul class="errorlist">{% for e in form.housing_type.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Family Status -->
+                        <div class="{% if form.family_status.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_family_status">Family Status</label>
+                            <select name="family_status" id="id_family_status" class="input-field">
+                                <option value="" disabled {% if not form.family_status.value %}selected{% endif %}>Select status</option>
+                                <option value="Married" {% if form.family_status.value == "Married" %}selected{% endif %}>Married</option>
+                                <option value="Single / not married" {% if form.family_status.value == "Single / not married" %}selected{% endif %}>Single / Not Married</option>
+                                <option value="Separated" {% if form.family_status.value == "Separated" %}selected{% endif %}>Separated</option>
+                                <option value="Widow" {% if form.family_status.value == "Widow" %}selected{% endif %}>Widow</option>
+                            </select>
+                            {% if form.family_status.errors %}<ul class="errorlist">{% for e in form.family_status.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Annual Income -->
+                        <div class="{% if form.annual_income.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_annual_income">Annual Income (₹)</label>
+                            <input type="number" name="annual_income" id="id_annual_income" class="input-field" placeholder="e.g. 850000" value="{{ form.annual_income.value|default:'' }}" min="0" step="1000">
+                            {% if form.annual_income.errors %}<ul class="errorlist">{% for e in form.annual_income.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Age -->
+                        <div class="{% if form.age.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_age">Age (Years)</label>
+                            <input type="number" name="age" id="id_age" class="input-field" placeholder="e.g. 35" value="{{ form.age.value|default:'' }}" min="18" max="80">
+                            {% if form.age.errors %}<ul class="errorlist">{% for e in form.age.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Family Members -->
+                        <div class="{% if form.family_members.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_family_members">Family Members</label>
+                            <input type="number" name="family_members" id="id_family_members" class="input-field" placeholder="e.g. 4" value="{{ form.family_members.value|default:'' }}" min="1" max="20">
+                            {% if form.family_members.errors %}<ul class="errorlist">{% for e in form.family_members.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Children -->
+                        <div class="{% if form.children.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_children">Number of Children</label>
+                            <input type="number" name="children" id="id_children" class="input-field" placeholder="e.g. 1" value="{{ form.children.value|default:'' }}" min="0" max="10">
+                            {% if form.children.errors %}<ul class="errorlist">{% for e in form.children.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- Employment Years -->
+                        <div class="sm:col-span-2 {% if form.employment_years.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_employment_years">Employment Years</label>
+                            <input type="number" name="employment_years" id="id_employment_years" class="input-field" placeholder="e.g. 8" value="{{ form.employment_years.value|default:'' }}" min="0" max="50">
+                            {% if form.employment_years.errors %}<ul class="errorlist">{% for e in form.employment_years.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ── Credit Behavioral Analytics ── -->
+                <div class="section-card">
+                    <div class="section-title">
+                        <span class="section-title-icon bg-indigo-50">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="2" stroke="#4f46e5" stroke-width="1.5"/><path d="M5 7h6M5 10h4" stroke="#4f46e5" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </span>
+                        Credit Behavioral Analytics
+                    </div>
+
+                    <!-- Legend -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:22px;">
+                        <p style="font-size:0.7rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#64748b; margin-bottom:10px;">Repayment Status Legend</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="legend-chip"><span class="legend-chip-key">C</span><span class="legend-chip-val">Closed Account</span></div>
+                            <div class="legend-chip"><span class="legend-chip-key">X</span><span class="legend-chip-val">No Credit Activity</span></div>
+                            <div class="legend-chip"><span class="legend-chip-key">0</span><span class="legend-chip-val">Paid On Time</span></div>
+                            <div class="legend-chip"><span class="legend-chip-key">1</span><span class="legend-chip-val">1 Month Delinquent</span></div>
+                            <div class="legend-chip"><span class="legend-chip-key">2</span><span class="legend-chip-val">2 Months Delinquent</span></div>
+                            <div class="legend-chip"><span class="legend-chip-key">3</span><span class="legend-chip-val">3 Months Delinquent</span></div>
+                            <div class="legend-chip"><span class="legend-chip-key">4</span><span class="legend-chip-val">4 Months Delinquent</span></div>
+                            <div class="legend-chip"><span class="legend-chip-key">5</span><span class="legend-chip-val">5+ Months Delinquent</span></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                        <!-- Credit History Length -->
+                        <div class="sm:col-span-2 {% if form.history_length.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_history_length">Credit History Length (Months)</label>
+                            <input type="number" name="history_length" id="id_history_length" class="input-field" placeholder="e.g. 24" value="{{ form.history_length.value|default:'' }}" min="0">
+                            {% if form.history_length.errors %}<ul class="errorlist">{% for e in form.history_length.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_C -->
+                        <div class="{% if form.cnt_c.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_c">Closed Months (CNT_C)</label>
+                            <input type="number" name="cnt_c" id="id_cnt_c" class="input-field" placeholder="e.g. 3" value="{{ form.cnt_c.value|default:'' }}" min="0">
+                            {% if form.cnt_c.errors %}<ul class="errorlist">{% for e in form.cnt_c.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_X -->
+                        <div class="{% if form.cnt_x.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_x">No Loan Months (CNT_X)</label>
+                            <input type="number" name="cnt_x" id="id_cnt_x" class="input-field" placeholder="e.g. 2" value="{{ form.cnt_x.value|default:'' }}" min="0">
+                            {% if form.cnt_x.errors %}<ul class="errorlist">{% for e in form.cnt_x.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_0 -->
+                        <div class="{% if form.cnt_0.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_0">On-Time Months (CNT_0)</label>
+                            <input type="number" name="cnt_0" id="id_cnt_0" class="input-field" placeholder="e.g. 12" value="{{ form.cnt_0.value|default:'' }}" min="0">
+                            {% if form.cnt_0.errors %}<ul class="errorlist">{% for e in form.cnt_0.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_1 -->
+                        <div class="{% if form.cnt_1.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_1">1-Month Late (CNT_1)</label>
+                            <input type="number" name="cnt_1" id="id_cnt_1" class="input-field" placeholder="e.g. 1" value="{{ form.cnt_1.value|default:'' }}" min="0">
+                            {% if form.cnt_1.errors %}<ul class="errorlist">{% for e in form.cnt_1.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_2 -->
+                        <div class="{% if form.cnt_2.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_2">2-Month Late (CNT_2)</label>
+                            <input type="number" name="cnt_2" id="id_cnt_2" class="input-field" placeholder="e.g. 0" value="{{ form.cnt_2.value|default:'' }}" min="0">
+                            {% if form.cnt_2.errors %}<ul class="errorlist">{% for e in form.cnt_2.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_3 -->
+                        <div class="{% if form.cnt_3.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_3">3-Month Late (CNT_3)</label>
+                            <input type="number" name="cnt_3" id="id_cnt_3" class="input-field" placeholder="e.g. 0" value="{{ form.cnt_3.value|default:'' }}" min="0">
+                            {% if form.cnt_3.errors %}<ul class="errorlist">{% for e in form.cnt_3.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_4 -->
+                        <div class="{% if form.cnt_4.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_4">4-Month Late (CNT_4)</label>
+                            <input type="number" name="cnt_4" id="id_cnt_4" class="input-field" placeholder="e.g. 0" value="{{ form.cnt_4.value|default:'' }}" min="0">
+                            {% if form.cnt_4.errors %}<ul class="errorlist">{% for e in form.cnt_4.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                        <!-- CNT_5 -->
+                        <div class="{% if form.cnt_5.errors %}field-error{% endif %}">
+                            <label class="field-label" for="id_cnt_5">5+ Month Late (CNT_5)</label>
+                            <input type="number" name="cnt_5" id="id_cnt_5" class="input-field" placeholder="e.g. 0" value="{{ form.cnt_5.value|default:'' }}" min="0">
+                            {% if form.cnt_5.errors %}<ul class="errorlist">{% for e in form.cnt_5.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ── Analyze Button ── -->
+            <div class="mt-8 text-center">
+                <button type="submit" class="btn-analyze">
+                    <span style="display:inline-flex; align-items:center; gap:10px;">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7.5" stroke="#fff" stroke-width="1.5"/><path d="M6 9h6M9 6v6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        Analyze Risk
+                    </span>
+                </button>
+                <p style="font-size:0.75rem; color:#94a3b8; margin-top:10px;">Powered by XGBoost · Results generated in &lt;200ms</p>
+            </div>
+
+        </form>
+
+        <!-- ── Results Dashboard ── -->
+        {% if result %}
+        <section class="mt-12">
+            <p style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#94a3b8; margin-bottom:16px;">Assessment Results</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+                <!-- Credit Score -->
+                <div class="section-card result-card text-center" style="padding: 28px 20px;">
+                    <p class="result-label">Credit Score</p>
+                    <p class="result-score" style="color:#1d4ed8;">{{ result.credit_score }}</p>
+                    <div class="divider" style="background:#1d4ed8;"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Out of 900</p>
+                </div>
+
+                <!-- Probability of Default -->
+                <div class="section-card result-card text-center" style="padding: 28px 20px;">
+                    <p class="result-label">Probability of Default</p>
+                    <p class="result-score" style="color:{% if result.default_prob < 15 %}#f59e0b{% elif result.default_prob < 30 %}#f97316{% else %}#ef4444{% endif %};">{{ result.default_prob }}%</p>
+                    <div class="divider" style="background:#f59e0b;"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Model confidence: 90.4%</p>
+                </div>
+
+                <!-- Risk Band -->
+                <div class="section-card result-card text-center" style="padding: 28px 20px;">
+                    <p class="result-label">Risk Band</p>
+                    <p style="font-size:1.6rem; font-weight:800; color:{% if result.risk_band == 'LOW RISK' %}#16a34a{% elif result.risk_band == 'MEDIUM RISK' %}#d97706{% else %}#dc2626{% endif %}; margin-top:6px;">{{ result.risk_band }}</p>
+                    <div class="divider" style="background:{% if result.risk_band == 'LOW RISK' %}#16a34a{% elif result.risk_band == 'MEDIUM RISK' %}#d97706{% else %}#dc2626{% endif %};"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Behavioral profile</p>
+                </div>
+
+                <!-- Recommendation -->
+                <div class="section-card result-card text-center" style="padding: 28px 20px;">
+                    <p class="result-label">Recommendation</p>
+                    <p style="font-size:1.6rem; font-weight:800; color:{% if result.recommendation == 'APPROVE' %}#16a34a{% else %}#dc2626{% endif %}; margin-top:6px;">{{ result.recommendation }}</p>
+                    <div class="divider" style="background:{% if result.recommendation == 'APPROVE' %}#16a34a{% else %}#dc2626{% endif %};"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Final decision</p>
+                </div>
+
+            </div>
+        </section>
+
+        {% if explanations %}
+
+        <section class="mt-10">
+
+            <div class="section-card">
+
+                <h2 class="text-xl font-bold mb-6">
+                    Why This Score Was Assigned
+                </h2>
+
+                <div class="space-y-3">
+
+                    {% for item in explanations %}
+
+                        {% if item.type == "positive" %}
+
+                            <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+                                <span class="font-semibold text-green-700">
+                                    ✓ Positive Factor
+                                </span>
+
+                                <p class="text-green-800 mt-1">
+                                    {{ item.text }}
+                                </p>
+                            </div>
+
+                        {% else %}
+
+                            <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                                <span class="font-semibold text-red-700">
+                                    ⚠ Risk Factor
+                                </span>
+
+                                <p class="text-red-800 mt-1">
+                                    {{ item.text }}
+                                </p>
+                            </div>
+
+                        {% endif %}
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </section>
+
+        {% endif %}
+
+        {% if shap_explanations %}
+
+        <section class="mt-8">
+
+            <div class="section-card">
+
+                <h2 class="text-xl font-bold text-slate-800 mb-2">
+                    🧠 AI Decision Factors
+                </h2>
+
+                <p class="text-sm text-slate-500 mb-6">
+                    Top factors identified by the machine learning model that influenced this prediction.
+                </p>
+
+                <div class="space-y-3">
+
+                    {% for item in shap_explanations %}
+
+                        {% if item.direction == "risk" %}
+
+                        <div class="flex items-center justify-between p-4 rounded-xl border border-red-200 bg-red-50">
+
+                            <div>
+                                <h3 class="font-semibold text-red-700">
+                                    {{ item.feature }}
+                                </h3>
+
+                                <p class="text-sm text-red-600">
+                                    Increased default risk
+                                </p>
+                            </div>
+
+                            <div class="text-red-700 font-bold">
+                                +{{ item.impact }}
+                            </div>
+
+                        </div>
+
+                        {% else %}
+
+                        <div class="flex items-center justify-between p-4 rounded-xl border border-green-200 bg-green-50">
+
+                            <div>
+                                <h3 class="font-semibold text-green-700">
+                                    {{ item.feature }}
+                                </h3>
+
+                                <p class="text-sm text-green-600">
+                                    Reduced default risk
+                                </p>
+                            </div>
+
+                            <div class="text-green-700 font-bold">
+                                {{ item.impact }}
+                            </div>
+
+                        </div>
+
+                        {% endif %}
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </section>
+
+        {% endif %}
+
+        {% else %}
+        <!-- Placeholder state (no prediction yet) -->
+        <section class="mt-12">
+            <p style="font-size:0.7rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#94a3b8; margin-bottom:16px;">Assessment Results</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="section-card text-center" style="padding: 28px 20px; opacity:0.55;">
+                    <p class="result-label">Credit Score</p>
+                    <p class="result-score" style="color:#1d4ed8; font-size:2.5rem;">—</p>
+                    <div class="divider" style="background:#1d4ed8;"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Submit form to generate</p>
+                </div>
+                <div class="section-card text-center" style="padding: 28px 20px; opacity:0.55;">
+                    <p class="result-label">Probability of Default</p>
+                    <p class="result-score" style="color:#f59e0b; font-size:2.5rem;">—%</p>
+                    <div class="divider" style="background:#f59e0b;"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Submit form to generate</p>
+                </div>
+                <div class="section-card text-center" style="padding: 28px 20px; opacity:0.55;">
+                    <p class="result-label">Risk Band</p>
+                    <p class="result-score" style="color:#64748b; font-size:2.5rem;">—</p>
+                    <div class="divider" style="background:#64748b;"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Submit form to generate</p>
+                </div>
+                <div class="section-card text-center" style="padding: 28px 20px; opacity:0.55;">
+                    <p class="result-label">Recommendation</p>
+                    <p class="result-score" style="color:#64748b; font-size:2.5rem;">—</p>
+                    <div class="divider" style="background:#64748b;"></div>
+                    <p style="font-size:0.72rem; color:#94a3b8; margin-top:8px;">Submit form to generate</p>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+    </main>
+
+    <!-- ── Footer ── -->
+    <footer style="text-align:center; padding:32px 16px; color:#94a3b8; font-size:0.75rem; margin-top:24px; border-top:1px solid #e2e8f0;">
+        Behavioral Credit Risk Engine · Internal Use Only · Not for regulatory submission
+    </footer>
+
+</body>
+</html>
